@@ -7,6 +7,7 @@ import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.concurrent.WorkerStateEvent;
 import javafx.event.ActionEvent;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
@@ -54,6 +55,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   abgemeldet.
  */
 public class Client extends Application {
+
+    public static Scene scene;
+
     private final int HEIGHT = 500;
     private final int WIDTH = 800;
     private final int FONTSIZE = 14;
@@ -152,32 +156,12 @@ public class Client extends Application {
      */
     @Override
     public void start(Stage stage) throws Exception {
-        this.stage = stage;
-        eingabeZeile = new TextField();
-        eingabeZeile.setStyle(FONT);
-        // Wenn return gedrückt, dann rufe Eventhandler sendenachricht auf
-        eingabeZeile.setOnAction(this::sendeNachricht);
+        final FXMLLoader fxmlLoader = new FXMLLoader(getClass().getClassLoader().getResource("ChatWindow.fxml"));
+        scene = new Scene(fxmlLoader.load(), 600, 400);
+        stage.setTitle("Chat Window");
+        stage.setScene(scene);
+        scene.setUserAgentStylesheet("style.css");
 
-        verlauf = new TextArea();
-        verlauf.setWrapText(true);
-        verlauf.setStyle(FONT);
-        verlauf.setEditable(false);
-        verlauf.setPrefHeight(HEIGHT-6*FONTSIZE);
-        verlauf.setPrefWidth(WIDTH-20);
-
-        button = new Button("Anmelden");
-        button.setStyle(FONT + BG_GRAY);
-        button.setOnAction(this::handleButton);
-
-        final VBox vbox = new VBox();
-        final ScrollPane pane = new ScrollPane(verlauf);
-        vbox.getChildren().addAll(pane, eingabeZeile, button);
-        stage.setScene(new Scene(vbox, WIDTH, HEIGHT));
-        stage.setTitle("ChatClient");
-        stage.setOnCloseRequest( e -> {
-            logout();
-            Platform.exit();
-        } );
         stage.show();
     }
 
