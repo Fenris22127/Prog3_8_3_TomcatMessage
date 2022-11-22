@@ -1,0 +1,29 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'org.openjfx.javafxplugin' version '0.0.13'
+    id 'org.beryx.jlink' version '2.25.0'
+}
+
+application {
+    mainModule = 'Prog3_8_3_TomcatMessage.Client.main'
+    mainClass = "${group}.${project.name.toLowerCase()}.Main"
+
+}
+
+javafx {
+    version = '17.0.2'
+    modules = ['javafx.controls', 'javafx.fxml']
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': application.mainClassName
+        )
+    }
+}
+
+dependencies {
+    implementation project(':Common')
+}

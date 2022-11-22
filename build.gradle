@@ -1,0 +1,37 @@
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'application'
+
+    group 'de.medieninformatik'
+    version '1.0-SNAPSHOT'
+
+    sourceCompatibility = '17'
+    targetCompatibility = '17'
+
+    ext {
+        junitVersion = '5.9.1'
+        tomcatVersion = '10.1.1'
+    }
+
+    run {
+        standardInput = System.in
+        standardOutput = System.out
+    }
+
+    tasks.withType(JavaCompile) {
+        options.encoding = 'UTF-8'
+    }
+
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        testImplementation "org.junit.jupiter:junit-jupiter-api:${junitVersion}"
+        testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:${junitVersion}"
+    }
+
+    test {
+        useJUnitPlatform()
+    }
+}

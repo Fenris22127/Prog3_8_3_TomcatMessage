@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- http://localhost:8080/NewsWS/news.html  (NewsWS ist der  webbapps-Name -->
+    <meta charset="UTF-8">
+    <title>Nachrichtenproduzent</title>
+    <script>
+        const uri = window.location.href
+            .replace(/\.[^/.]+$/, "")  // remove extension
+            .replace(window.location.protocol, "ws:"); // replace http: with ws:
+        let socket;
+
+        function showMessage(text) {
+           const element = document.getElementById("message");
+           element.innerHTML += "<br />" + text;
+        }
+
+        window.onload = () => {
+            if(!"WebSocket" in window) {
+                showMessage("Der Browser interstützt keine WebSockets.");
+                return;
+            }
+            socket = new WebSocket(uri);
+            socket.onopen    = ()        => showMessage("onOpen");
+            socket.onclose   = ()        => showMessage("onClose");
+            socket.onerror   = (error)   => showMessage(error);
+            socket.onmessage = (message) => showMessage(message.data);
+        }
+
+        window.onunload = () => socket.close();
+    </script>
+</head>
+<body>
+    <div id="message"></div>
+</body>
+</html>

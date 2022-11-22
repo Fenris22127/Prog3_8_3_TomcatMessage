@@ -1,0 +1,6 @@
+rootProject.name = 'NewsWS'
+include 'Server'
+include 'Client'
+include 'Common'
+include 'TCServer'
+

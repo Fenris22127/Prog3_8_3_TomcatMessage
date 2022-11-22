@@ -1,0 +1,16 @@
+application {
+    mainClass  = "${group}.${project.name.toLowerCase()}.Main"
+}
+
+jar {
+    manifest {
+        attributes(
+                'Main-Class': application.mainClassName
+        )
+    }
+}
+
+dependencies {
+    implementation "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}"
+    implementation "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}"
+}
