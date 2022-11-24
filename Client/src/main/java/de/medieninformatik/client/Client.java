@@ -1,6 +1,8 @@
 package de.medieninformatik.client;
 
 import de.medieninformatik.Message.Message;
+import de.medieninformatik.server.Nachricht;
+import jakarta.websocket.*;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.concurrent.Service;
@@ -20,6 +22,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -54,6 +57,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  *   b) Falls der Nutzer angemeldet ist, wird er durch Drücken des Knopfes
  *   abgemeldet.
  */
+@ClientEndpoint
 public class Client extends Application {
 
     public static Scene scene;
@@ -93,15 +97,17 @@ public class Client extends Application {
         protected Void call() throws Exception {
             semaphore.acquire(); // Verhindert zu frühen cleanup
             while(isLoggedIn.get()) {
-                Message msg = (Message) in.readObject();
-                Message.Action action = msg.action();
-                final String ausgabe = switch(action) {
+                Message msg = (Message) in.readObject(); //# gets Message content
+                Message.Action action = msg.action(); //# gets Message action
+
+                final String ausgabe = switch(action) { //# decides output based on the action in the message
                     case JOIN -> String.format(">>> %s ist angemeldet%n", msg.user());
                     case SEND -> String.format("%s: %s%n", msg.user(), msg.content());
                     case LEAVE -> String.format("<<< %s ist abgemeldet%n", msg.user());
                 };
-                Platform.runLater( () -> verlauf.appendText(ausgabe) );
-                if(action == Message.Action.LEAVE && user.equals(msg.user()))  {
+                Platform.runLater( () -> verlauf.appendText(ausgabe));
+
+                if(action == Message.Action.LEAVE && user.equals(msg.user()))  { //# if user clicked on logout, log user out
                     isLoggedIn.set(false);
                 }
             }
@@ -111,6 +117,7 @@ public class Client extends Application {
     }
 
     /**
+     * SENDS A MESSAGE <br>
      * Wartet auf Nachricht in Warteschlange.
      * Diese Nachricht wird dann an den Server gesendet.
      * LEAVE-Nachricht oder isLoggedIn == false beendet die Task
@@ -146,7 +153,7 @@ public class Client extends Application {
         port = Integer.parseInt(map.getOrDefault("port", "60000"));
         isLoggedIn = new AtomicBoolean(false);
         semaphore = new Semaphore(1);
-        messages = new LinkedBlockingQueue<Message>();
+        messages = new LinkedBlockingQueue<>();
     }
 
     /**
@@ -156,12 +163,38 @@ public class Client extends Application {
      */
     @Override
     public void start(Stage stage) throws Exception {
+        this.stage = stage;
         final FXMLLoader fxmlLoader = new FXMLLoader(getClass().getClassLoader().getResource("ChatWindow.fxml"));
         scene = new Scene(fxmlLoader.load(), 600, 400);
         stage.setTitle("Chat Window");
         stage.setScene(scene);
         scene.setUserAgentStylesheet("style.css");
 
+        eingabeZeile = new TextField();
+        eingabeZeile.setStyle(FONT);
+        // Wenn return gedrückt, dann rufe Eventhandler sendenachricht auf
+        eingabeZeile.setOnAction(this::sendeNachricht);
+
+        verlauf = new TextArea();
+        verlauf.setWrapText(true);
+        verlauf.setStyle(FONT);
+        verlauf.setEditable(false);
+        verlauf.setPrefHeight(HEIGHT-6*FONTSIZE);
+        verlauf.setPrefWidth(WIDTH-20);
+
+        button = new Button("Anmelden");
+        button.setStyle(FONT + BG_GRAY);
+        button.setOnAction(this::handleButton);
+
+        final VBox vbox = new VBox();
+        final ScrollPane pane = new ScrollPane(verlauf);
+        vbox.getChildren().addAll(pane, eingabeZeile, button);
+        stage.setScene(new Scene(vbox, WIDTH, HEIGHT));
+        stage.setTitle("ChatClient");
+        stage.setOnCloseRequest( e -> {
+            logout();
+            Platform.exit();
+        } );
         stage.show();
     }
 
@@ -179,27 +212,62 @@ public class Client extends Application {
         }
     }
 
+    private ClientEndpointConfig clientConfig;
+    private String username;
+
+    @OnOpen
+    public void connected(Session session, ClientEndpointConfig clientConfig) {
+        //Nachricht.connectToServer(Nachricht.class, URI.create("/news"));
+        this.clientConfig = (ClientEndpointConfig) clientConfig;
+        this.user = session.getUserPrincipal().getName();
+        System.out.println("User " + username + " connected to Chat Room");
+    }
+
     /**
+     * The client receives a message
+     * @param msg
+     */
+    @OnMessage
+    public void connected(String msg, Session session) throws IOException {
+        session.getBasicRemote().sendText("Message from Client");
+        System.out.println("Message from Chat Server: " + msg);
+    }
+
+    @OnClose
+    public void disconnected(Session session, CloseReason reason) {
+        System.out.println("User " + username + " disconnected as a result of " + reason.getReasonPhrase());
+    }
+
+    @OnError
+    public void disconnected(Session session, Throwable error) {
+        System.out.println("Error communicating with server: " + error.getMessage());
+    }
+
+
+    /**
+     * @onOpen
      * Melde Benutzer an.
      */
     private void login() {
         try {
+            //# connects to server and creates in and out
             socket = new Socket(host, port);
             out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
             in = new ObjectInputStream(socket.getInputStream());
 
-            sendService = new Service<Void> () {
+            //# lets user send messages
+            sendService = new Service<>() {
                 @Override
                 protected Task<Void> createTask() {
                     return new SendTask();
                 }
             };
-            // cleanup wartet auf freie semaphorenvon ChatTask
+            // cleanup wartet auf freie semaphoren von ChatTask
             sendService.setOnSucceeded(this::cleanup);
             sendService.setOnFailed(this::cleanup);
 
-            service = new Service<Void>() {
+            service = new Service<>() {
                 @Override
                 protected Task<Void> createTask() {
                     return new ChatTask();
@@ -226,6 +294,7 @@ public class Client extends Application {
     }
 
     /**
+     * @OnClose
      * Melde Nutzer ab
      */
     private void logout() {
@@ -257,6 +326,7 @@ public class Client extends Application {
     }
 
     /**
+     * @onMessage
      * Schreibt den Inhalt der Eingabezeile als Nachricht in
      * die Sende-Warteschlange.
      * Event wird ausgelöst, wenn Nutzer eingeloggt ist und
@@ -264,8 +334,9 @@ public class Client extends Application {
      * @param event
      */
     private void sendeNachricht(ActionEvent event) {
+        System.out.println("sendeNachricht()");
         messages.offer(
-            new Message(Message.Action.SEND, user, eingabeZeile.getText())
+                new Message(Message.Action.SEND, user, eingabeZeile.getText())
         );
         eingabeZeile.setText("");
         eingabeZeile.requestFocus();

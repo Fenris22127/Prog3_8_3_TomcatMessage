@@ -9,11 +9,15 @@ import org.apache.catalina.startup.Tomcat;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Scanner;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class Main {
+
+    private final static String command = "stopp";
     public static void main(String[] args) throws Exception {
+        Scanner scanner = new Scanner(System.in);
         final int port = 8080;
         String webapps = "NewsWS";
         String doc = "web";
@@ -41,7 +45,9 @@ public class Main {
 
         Thread t = new Thread(Nachricht.quelle());
         t.start();
-        javax.swing.JOptionPane.showMessageDialog(null, "Server beenden!");
+
+        while(!command.equals(scanner.nextLine()));
+
         t.interrupt();
         tomcat.stop();
         tomcat.destroy();

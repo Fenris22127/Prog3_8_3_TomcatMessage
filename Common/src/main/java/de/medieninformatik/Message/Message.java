@@ -15,4 +15,15 @@ public record Message(
     public enum Action {
         JOIN, SEND, LEAVE // Anmelden, Nachricht senden, Abmelden
     }
+/*
+    public class MessageEncoder {
+
+        public String encode(Message message) {
+            String jsonString = String.format("{\"action\":\"%s\",\"user\":\"%s\",\"message\":\"%s\"}",
+                    message.action,
+                    message.user.replace("\"", "\\\""),
+                    message.content.replace("\"", "\\\""));
+            return jsonString;
+        }
+    }*/
 }

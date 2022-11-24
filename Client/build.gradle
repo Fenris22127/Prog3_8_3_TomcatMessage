@@ -1,7 +1,7 @@
 plugins {
     id 'java'
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.13'
+    id 'org.openjfx.javafxplugin'
     id 'org.beryx.jlink' version '2.25.0'
 }
 
@@ -26,4 +26,7 @@ jar {
 
 dependencies {
     implementation project(':Common')
+    implementation project(':Server')
+    implementation "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}"
+    implementation "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}"
 }
